@@ -118,9 +118,15 @@ function buildDinnerEmail(dayKey) {
 
 // ─── Send email ───────────────────────────────────────────────────────────────
 async function sendEmail(subject, html) {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+ const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
+  }
+});
   });
   await transporter.sendMail({
     from: `"Meal Planner 🍽️" <${process.env.GMAIL_USER}>`,
