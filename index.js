@@ -1,14 +1,16 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const cron = require("node-cron");
 const express = require("express");
 
 const app = express();
 
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 // Recipients
 const RECIPIENTS = [
-  process.env.GMAIL_USER,
+  "pawanram0823@gmail.com",
   "preethilingam@gmail.com",
-  "aarnavvenkat06@gmail.com",
+  "aarnavvenkat06@gmail.com"
 ];
 
 // Meal plan
@@ -19,7 +21,7 @@ const MEAL_PLAN = {
   THU:{breakfast:"Upma · Coconut chutney · Eggs",lunch:"Rice · Pumpkin sambar · Raw banana poriyal",dinner:"Chapati · Methi Aloo · Moong dal"},
   FRI:{breakfast:"Pongal · Sambar · Curd",lunch:"Rice · Drumstick sambar · Beetroot poriyal",dinner:"Chapati · Matar Paneer"},
   SAT:{breakfast:"Egg dosa · Onion tomato chutney",lunch:"Rice · Tomato sambar · Beans poriyal",dinner:"Poori · Aloo Sabzi"},
-  SUN:{breakfast:"Idli · Coconut chutney · Omelette",lunch:"Rice · Veg sambar · Cabbage poriyal",dinner:"Chapati · Palak Paneer"},
+  SUN:{breakfast:"Idli · Coconut chutney · Omelette",lunch:"Rice · Veg sambar · Cabbage poriyal",dinner:"Chapati · Palak Paneer"}
 };
 
 const DAY_NAMES={MON:"Monday",TUE:"Tuesday",WED:"Wednesday",THU:"Thursday",FRI:"Friday",SAT:"Saturday",SUN:"Sunday"};
@@ -54,28 +56,18 @@ function buildDinnerEmail(dayKey){
   `;
 }
 
-// Email sender
+// Send email
 async function sendEmail(subject,html){
   try{
 
-    const transporter=nodemailer.createTransport({
-      host:"smtp.gmail.com",
-      port:587,
-      secure:false,
-      auth:{
-        user:process.env.GMAIL_USER,
-        pass:process.env.GMAIL_APP_PASSWORD
-      }
+    await resend.emails.send({
+      from:"Meal Planner <onboarding@resend.dev>",
+      to:RECIPIENTS,
+      subject:subject,
+      html:html
     });
 
-    const info=await transporter.sendMail({
-      from:`Meal Planner <${process.env.GMAIL_USER}>`,
-      to:RECIPIENTS.join(","),
-      subject,
-      html
-    });
-
-    console.log("Email sent:",info.response);
+    console.log("Email sent");
 
   }catch(err){
     console.log("EMAIL ERROR:",err.message);
