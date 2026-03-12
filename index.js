@@ -5,7 +5,6 @@ import cron from "node-cron";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// transporter for gmail
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -14,24 +13,15 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// your meal plan
 const mealPlan = `
-🍽 Daily Meal Plan
+Today's Meal Plan
 
-Breakfast:
-Oats with fruit + coffee
-
-Lunch:
-Rice, dal, vegetable sabzi, curd
-
-Snack:
-Fruit or nuts
-
-Dinner:
-Chapati + paneer/chicken + salad
+Breakfast: Eggs and toast
+Lunch: Rice, dal, vegetables
+Snack: Fruit or nuts
+Dinner: Chapati with paneer or chicken
 `;
 
-// function to send email
 async function sendMealEmail() {
   try {
     await transporter.sendMail({
@@ -41,23 +31,21 @@ async function sendMealEmail() {
       text: mealPlan
     });
 
-    console.log("Meal email sent!");
+    console.log("Meal email sent");
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.log(error);
   }
 }
 
-// send every day at 8 AM
 cron.schedule("0 8 * * *", () => {
-  console.log("Sending daily meal email...");
+  console.log("Sending meal email");
   sendMealEmail();
 });
 
-// simple route so render keeps service alive
 app.get("/", (req, res) => {
-  res.send("Meal Email Bot Running");
+  res.send("Meal email bot is running");
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Server running on port " + PORT);
 });
