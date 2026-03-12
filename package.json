@@ -1,12 +1,108 @@
-{
-  "name": "meal-email-bot",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": { "start": "node index.js" },
-  "dependencies": {
-    "express": "^4.18.2",
-    "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.0"
-  },
-  "engines": { "node": ">=18.0.0" }
+const { Resend } = require("resend");
+const cron = require("node-cron");
+const express = require("express");
+
+const app = express();
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Recipients
+const RECIPIENTS = [
+  "pawanram0823@gmail.com",
+  "preethilingam@gmail.com",
+  "aarnavvenkat06@gmail.com"
+];
+
+// Meal plan
+const MEAL_PLAN = {
+  MON:{breakfast:"Idli · Sambar · Coconut chutney · Eggs",lunch:"Rice · Drumstick sambar · Beans poriyal",dinner:"Chapati · Aloo Matar · Paneer bhurji"},
+  TUE:{breakfast:"Dosa · Tomato chutney · Egg bhurji",lunch:"Rice · Vendakkai sambar · Cabbage poriyal",dinner:"Chapati · Jeera Aloo · Dal tadka"},
+  WED:{breakfast:"Bread omelette · Toast · Curd",lunch:"Rice · Brinjal sambar · Carrot poriyal",dinner:"Chapati · Bhindi Masala · Egg curry"},
+  THU:{breakfast:"Upma · Coconut chutney · Eggs",lunch:"Rice · Pumpkin sambar · Raw banana poriyal",dinner:"Chapati · Methi Aloo · Moong dal"},
+  FRI:{breakfast:"Pongal · Sambar · Curd",lunch:"Rice · Drumstick sambar · Beetroot poriyal",dinner:"Chapati · Matar Paneer"},
+  SAT:{breakfast:"Egg dosa · Onion tomato chutney",lunch:"Rice · Tomato sambar · Beans poriyal",dinner:"Poori · Aloo Sabzi"},
+  SUN:{breakfast:"Idli · Coconut chutney · Omelette",lunch:"Rice · Veg sambar · Cabbage poriyal",dinner:"Chapati · Palak Paneer"}
+};
+
+const DAY_NAMES={MON:"Monday",TUE:"Tuesday",WED:"Wednesday",THU:"Thursday",FRI:"Friday",SAT:"Saturday",SUN:"Sunday"};
+const DAY_KEYS=["SUN","MON","TUE","WED","THU","FRI","SAT"];
+
+function getTomorrowKey(){
+  const t=new Date();
+  t.setDate(t.getDate()+1);
+  return DAY_KEYS[t.getDay()];
 }
+
+function getTodayKey(){
+  return DAY_KEYS[new Date().getDay()];
+}
+
+function buildFullDayEmail(dayKey){
+  const day=MEAL_PLAN[dayKey];
+  return `
+  <h2>${DAY_NAMES[dayKey]} Meal Plan</h2>
+  <p><b>Breakfast:</b> ${day.breakfast}</p>
+  <p><b>Lunch:</b> ${day.lunch}</p>
+  <p><b>Dinner:</b> ${day.dinner}</p>
+  `;
+}
+
+function buildDinnerEmail(dayKey){
+  const day=MEAL_PLAN[dayKey];
+  return `
+  <h2>Tonight's Dinner (${DAY_NAMES[dayKey]})</h2>
+  <p>${day.dinner}</p>
+  `;
+}
+
+async function sendEmail(subject,html){
+  try{
+
+    await resend.emails.send({
+      from:"Meal Planner <onboarding@resend.dev>",
+      to:RECIPIENTS,
+      subject:subject,
+      html:html
+    });
+
+    console.log("Email sent");
+
+  }catch(err){
+    console.log("EMAIL ERROR:",err.message);
+  }
+}
+
+// Cron jobs
+cron.schedule("30 15 * * *",()=>{
+  const key=getTomorrowKey();
+  sendEmail(`Tomorrow's Meals (${DAY_NAMES[key]})`,buildFullDayEmail(key));
+});
+
+cron.schedule("30 5 * * *",()=>{
+  const key=getTodayKey();
+  sendEmail(`Tonight's Dinner (${DAY_NAMES[key]})`,buildDinnerEmail(key));
+});
+
+// Manual routes
+app.get("/test-evening",(req,res)=>{
+  const key=getTomorrowKey();
+  sendEmail(`Tomorrow's Meals (${DAY_NAMES[key]})`,buildFullDayEmail(key));
+  res.send("Email triggered");
+});
+
+app.get("/test-morning",(req,res)=>{
+  const key=getTodayKey();
+  sendEmail(`Tonight's Dinner (${DAY_NAMES[key]})`,buildDinnerEmail(key));
+  res.send("Email triggered");
+});
+
+app.get("/",(req,res)=>{
+  res.send(`
+  <h2>🍽️ Chennai Family Meal Planner</h2>
+  <p><a href="/test-evening">Send tomorrow meal plan</a></p>
+  <p><a href="/test-morning">Send dinner reminder</a></p>
+  `);
+});
+
+const PORT=process.env.PORT||3000;
+app.listen(PORT,()=>console.log("Meal planner running"));
